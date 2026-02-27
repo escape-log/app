@@ -1,0 +1,138 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>言い訳ポモドーロ</title>
+    <style>
+        :root {
+            --primary: #e74c3c;
+            --secondary: #2c3e50;
+            --bg: #f8f9fa;
+        }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; background: var(--bg); color: var(--secondary); display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .container { background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        #timer { font-size: 5rem; font-weight: bold; margin: 20px 0; color: var(--primary); }
+        .controls { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
+        button { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-start { background: var(--primary); color: white; }
+        .btn-stop { background: var(--secondary); color: white; }
+        button:hover { opacity: 0.8; }
+        
+        #log-section { width: 100%; max-width: 400px; margin-top: 30px; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; }
+        th, td { border-bottom: 1px solid #eee; padding: 12px; text-align: left; font-size: 0.9rem; }
+        th { background: #eee; }
+        .status-完走 { color: #27ae60; font-weight: bold; }
+        .status-挫折 { color: #e74c3c; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>ポモドーロタイマー</h2>
+        <div id="timer">25:00</div>
+        
+        <div class="controls">
+            <button class="btn-start" onclick="startTimer()">開始</button>
+            <button class="btn-stop" onclick="stopTimer()">停止（言い訳）</button>
+        </div>
+    </div>
+
+    <div id="log-section">
+        <h3>活動記録</h3>
+        <table id="log-table">
+            <thead>
+                <tr>
+                    <th>日時</th>
+                    <th>結果</th>
+                    <th>言い訳・メモ</th>
+                </tr>
+            </thead>
+            <tbody id="log-body"></tbody>
+        </table>
+        <button onclick="clearLogs()" style="margin-top:10px; font-size: 0.7rem;">記録をリセット</button>
+    </div>
+
+    <script>
+        let timeLeft = 25 * 60;
+        let timerId = null;
+
+        // ページ読み込み時にログを表示
+        window.onload = updateLogTable;
+
+        function updateDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            document.getElementById('timer').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function startTimer() {
+            if (timerId) return;
+            timerId = setInterval(() => {
+                timeLeft--;
+                updateDisplay();
+                if (timeLeft <= 0) {
+                    clearInterval(timerId);
+                    timerId = null;
+                    saveLog("完走", "やり切りました！");
+                    alert("お疲れ様です！25分経過しました。");
+                    resetTimer();
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (!timerId) return;
+            clearInterval(timerId);
+            timerId = null;
+
+            const excuse = prompt("なぜ止めたのですか？（言い訳を入力）");
+            if (excuse !== null) {
+                saveLog("挫折", excuse || "無言の帰宅");
+            }
+            resetTimer();
+        }
+
+        function resetTimer() {
+            timeLeft = 25 * 60;
+            updateDisplay();
+        }
+
+        function saveLog(status, note) {
+            const logs = JSON.parse(localStorage.getItem('pomodoro-logs') || '[]');
+            const newLog = {
+                date: new Date().toLocaleString('ja-JP'),
+                status: status,
+                note: note
+            };
+            logs.unshift(newLog); // 先頭に追加
+            localStorage.setItem('pomodoro-logs', JSON.stringify(logs));
+            updateLogTable();
+        }
+
+        function updateLogTable() {
+            const logs = JSON.parse(localStorage.getItem('pomodoro-logs') || '[]');
+            const tbody = document.getElementById('log-body');
+            tbody.innerHTML = '';
+            logs.forEach(log => {
+                const row = `<tr>
+                    <td>${log.date}</td>
+                    <td class="status-${log.status}">${log.status}</td>
+                    <td>${log.note}</td>
+                </tr>`;
+                tbody.insertAdjacentHTML('beforeend', row);
+            });
+        }
+
+        function clearLogs() {
+            if (confirm("全ての記録を消去しますか？")) {
+                localStorage.removeItem('pomodoro-logs');
+                updateLogTable();
+            }
+        }
+    </script>
+</body>
+</html>

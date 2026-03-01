@@ -110,6 +110,7 @@ function playFinishSound() {
     finishAudio.currentTime = 0; // 連続再生対応
     finishAudio.play();
 }
+let audioUnlocked = false;
 // ===== プリセット機能 =====
 const baseTimes = [25, 50];
 const presetContainer = document.getElementById('presetButtons');
@@ -300,6 +301,13 @@ function renderLogs() {
 
 // スタート
 startBtn.addEventListener('click', () => {
+if (!audioUnlocked) {
+    finishAudio.play().then(() => {
+        finishAudio.pause();
+        finishAudio.currentTime = 0;
+        audioUnlocked = true;
+    }).catch(()=>{});
+}
     if (timerId) return;
 
     // 入力値を取得

@@ -295,7 +295,7 @@ function saveLog(status, reason="", minutes=0) {
     renderTodayStreak();
 }
 
-// 履歴表示
+// 履歴表示（ここは変更なしですが、一応含めています）
 function renderLogs() {
     const logs = JSON.parse(localStorage.getItem('timerLogs') || "[]");
     historyList.innerHTML = logs.map(log => {
@@ -311,41 +311,64 @@ function renderLogs() {
     }).join('');
 }
 
-// スタート
+// スタートボタンの処理（ここを大幅に補強しました）
 startBtn.addEventListener('click', () => {
-if (!audioUnlocked) {
-    finishAudio.play().then(() => {
-        finishAudio.pause();
-        finishAudio.currentTime = 0;
-        audioUnlocked = true;
-    }).catch(()=>{});
-}
-    if (timerId) return;
+    // 【重要】既存のタイマーを一度完全に止める（速くなるのを防ぐ）
+    if (timerId) {
+        clearInterval(timerId);
+        timerId = null;
+    }
+
+    // 音声のロック解除
+    if (!audioUnlocked) {
+        finishAudio.play().then(() => {
+            finishAudio.pause();
+            finishAudio.currentTime = 0;
+            audioUnlocked = true;
+        }).catch(()=>{});
+    }
 
     // 入力値を取得
     const inputMinutes = parseInt(minuteInput.value) || 0;
     const minutes = inputMinutes > 0 ? inputMinutes : defaultMinutes;
     currentMinutes = minutes;
 
+    // 初期設定
     timeLeft = minutes * 60;
-    endTime = Date.now() + minutes * 60 * 1000;
+    // 終了時間を「今から〇秒後」として正確に設定
+    endTime = Date.now() + (timeLeft * 1000); 
+
     updateDisplay();
 
     startBtn.disabled = true;
     stopBtn.disabled = false;
 
+    // タイマー開始
     timerId = setInterval(() => {
-        timeLeft = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
-        updateDisplay();
-      if (timeLeft <= 0) {
-    clearInterval(timerId);
-    timerId = null;
-    playFinishSound();   // ←追加
-    alert("完走しました！");
-    saveLog("完走", "", minutes);
-    resetTimer();
-}
-    }, 1000);
+        const now = Date.now();
+        const diff = endTime - now;
+
+        if (diff <= 0) {
+            // 終了時の処理
+            clearInterval(timerId);
+            timerId = null;
+            timeLeft = 0;
+            updateDisplay();
+
+            playFinishSound(); // 音を鳴らす
+
+            // alertで音や描画が止まらないよう、わずかに遅らせて実行
+            setTimeout(() => {
+                alert("完走しました！");
+                saveLog("完走", "", minutes);
+                resetTimer();
+            }, 100);
+        } else {
+            // 残り時間を計算して表示
+            timeLeft = Math.floor(diff / 1000);
+            updateDisplay();
+        }
+    }, 1000); // 1秒ごとにチェック
 });
 
 // 中断

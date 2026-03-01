@@ -106,9 +106,20 @@ body {
 // 完走音
 const finishAudio = new Audio("finish.mp3");
 
-function playFinishSound() {
-    finishAudio.currentTime = 0; // 連続再生対応
-    finishAudio.play();
+function playFinishSound(times = 3) {
+    let count = 0;
+
+    function playOnce() {
+        finishAudio.currentTime = 0;
+        finishAudio.play();
+        count++;
+
+        if (count < times) {
+            setTimeout(playOnce, 1000); // 次までの間隔（ミリ秒）
+        }
+    }
+
+    playOnce();
 }
 let audioUnlocked = false;
 // ===== プリセット機能 =====
@@ -185,6 +196,7 @@ let defaultMinutes = 25;
 let currentMinutes = defaultMinutes;
 let timeLeft = defaultMinutes * 60;
 let timerId = null;
+let endTime = null;
 
 // プリセット表示
 renderPresetButtons();
@@ -316,15 +328,15 @@ if (!audioUnlocked) {
     currentMinutes = minutes;
 
     timeLeft = minutes * 60;
+    endTime = Date.now() + minutes * 60 * 1000;
     updateDisplay();
 
     startBtn.disabled = true;
     stopBtn.disabled = false;
 
     timerId = setInterval(() => {
-        timeLeft--;
+        timeLeft = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
         updateDisplay();
-
       if (timeLeft <= 0) {
     clearInterval(timerId);
     timerId = null;
@@ -365,4 +377,3 @@ renderTodayStreak();
 </body>
 
 </html>
-
